@@ -1,0 +1,19 @@
+{
+  "name": "sun-api-development",
+  "version": "1.0.0",
+  "description": "Chương trình tự học và thực hành môn API Development (Sun* Curriculum)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "keywords": [
+    "api-development",
+    "restful-api",
+    "jwt",
+    "swagger",
+    "postman",
+    "sun-asterisk"
+  ],
+  "author": "Huynh Phuoc Phu (cat1454)",
+  "license": "MIT"
+}

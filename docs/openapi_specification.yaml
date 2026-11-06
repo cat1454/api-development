@@ -1,0 +1,254 @@
+openapi: 3.0.3
+info:
+  title: Sun* API Development Course - Product Management API
+  description: Tài liệu đặc tả API chuẩn RESTful cho môn học API Development (Sun* Curriculum)
+  version: 1.0.0
+  contact:
+    name: Sun* Training Program
+    email: training@sun-asterisk.com
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Máy chủ thử nghiệm cục bộ (Local Development)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Nhập chuỗi JWT Access Token (được cấp sau khi login)
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: Xác thực người dùng bằng tài khoản và mật khẩu (HTTP Basic)
+
+  schemas:
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - category
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Bàn phím cơ không dây Sun* Pro"
+        price:
+          type: number
+          example: 1500000
+        category:
+          type: string
+          example: "electronics"
+        inStock:
+          type: boolean
+          example: true
+
+    CreateProductDto:
+      type: object
+      required:
+        - name
+        - price
+        - category
+      properties:
+        name:
+          type: string
+          minLength: 3
+          example: "Chuột Gaming công thái học"
+        price:
+          type: number
+          minimum: 1000
+          example: 850000
+        category:
+          type: string
+          example: "electronics"
+
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "RESOURCE_NOT_FOUND"
+        message:
+          type: string
+          example: "Không tìm thấy sản phẩm với ID yêu cầu"
+
+paths:
+  /auth/login:
+    post:
+      summary: Đăng nhập hệ thống & Cấp phát JWT Access Token
+      description: Gửi username và password để nhận về JWT Access Token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: "student"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '200':
+          description: Đăng nhập thành công, trả về Access Token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          description: Thiếu thông tin đăng nhập
+        '401':
+          description: Sai thông tin tài khoản hoặc mật khẩu
+
+  /products:
+    get:
+      summary: Lấy danh sách sản phẩm
+      description: Trả về danh sách sản phẩm, hỗ trợ lọc theo danh mục (category) và giới hạn số lượng.
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Lọc theo thể loại sản phẩm (ví dụ electronics, books)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Số lượng bản ghi tối đa
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+    post:
+      summary: Thêm mới sản phẩm (Yêu cầu xác thực JWT)
+      description: Chỉ người dùng đã đăng nhập (có Bearer Token) mới được phép thêm sản phẩm mới.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductDto'
+      responses:
+        '201':
+          description: Tạo sản phẩm mới thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Dữ liệu validate không hợp lệ
+        '401':
+          description: Chưa truyền hoặc sai Bearer Token xác thực
+
+  /products/{id}:
+    get:
+      summary: Lấy chi tiết sản phẩm theo ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID của sản phẩm
+      responses:
+        '200':
+          description: Tìm thấy sản phẩm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Không tìm thấy sản phẩm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Cập nhật thông tin sản phẩm (Yêu cầu xác thực JWT)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductDto'
+      responses:
+        '200':
+          description: Cập nhật thành công
+        '404':
+          description: Không tìm thấy sản phẩm để cập nhật
+
+    delete:
+      summary: Xóa sản phẩm theo ID (Yêu cầu xác thực JWT)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Xóa thành công, không trả về dữ liệu body
+        '401':
+          description: Không có quyền xóa
+        '404':
+          description: Không tìm thấy sản phẩm
+
